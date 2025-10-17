@@ -1,6 +1,16 @@
-out/
-bin/
-*.class
-.idea/
-fleet/
+# === Gradle build outputs ===
+.gradle/
+build/
 
+# === IDE / editor ===
+.idea/
+.vscode/
+*.iml
+
+# === OS files ===
+.DS_Store
+Thumbs.db
+
+# === Logs / temp ===
+*.log
+*.tmp
