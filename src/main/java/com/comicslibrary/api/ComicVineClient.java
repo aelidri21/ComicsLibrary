@@ -9,7 +9,6 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,14 +16,11 @@ import java.util.List;
 
 /**
  * ComicVine API Client (https://comicvine.gamespot.com/api/)
- * Requires COMICVINE_API_KEY environment variable.
  */
 public class ComicVineClient implements ComicApiClient {
 
     private static final String BASE_URL = "https://comicvine.gamespot.com/api/search/";
-    private static final String API_KEY = System.getenv("COMICVINE_API_KEY");
-
-    private static final String USER_AGENT = "ComicsLibrary/1.0 (+https://github.com/yourprofile)";
+    private static final String USER_AGENT = "ComicsLibrary/1.0 (+https://github.com/anas)";
     private static final int MAX_RESULTS = 10;
 
     private static final String RESOURCES = "volume,issue";
@@ -34,14 +30,28 @@ public class ComicVineClient implements ComicApiClient {
     private final HttpClient http = HttpClient.newHttpClient();
     private final ObjectMapper mapper = new ObjectMapper();
 
+    private final String apiKey;
+
+    public ComicVineClient(String apiKey) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalArgumentException("Missing COMICVINE_API_KEY");
+        }
+        this.apiKey = apiKey;
+    }
+
+    public ComicVineClient() {
+        this(System.getenv("COMICVINE_API_KEY"));
+    }
+
     @Override
     public List<Comic> search(String query) throws IOException, InterruptedException {
-        if (API_KEY == null || API_KEY.isBlank()) {
-            throw new IllegalStateException("Missing COMICVINE_API_KEY environment variable.");
+        if (query == null || query.isBlank()) {
+            return Collections.emptyList();
         }
 
         String url = buildSearchUrl(query);
         HttpResponse<String> res = sendRequest(url);
+
         if (res.statusCode() != 200) {
             System.err.printf("ComicVine returned HTTP %d%n", res.statusCode());
             return Collections.emptyList();
@@ -53,7 +63,7 @@ public class ComicVineClient implements ComicApiClient {
     private String buildSearchUrl(String query) {
         String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8);
         String encodedFields = URLEncoder.encode(FIELD_LIST, StandardCharsets.UTF_8);
-        String encodedKey = URLEncoder.encode(API_KEY, StandardCharsets.UTF_8);
+        String encodedKey = URLEncoder.encode(apiKey, StandardCharsets.UTF_8);
 
         return BASE_URL + "?"
                 + "api_key=" + encodedKey
@@ -88,7 +98,6 @@ public class ComicVineClient implements ComicApiClient {
         return comics;
     }
 
-    /** Parse a single ComicVine item node into a Comic instance. */
     private Comic parseComic(JsonNode item) {
         String id = safeText(item, "id");
         String name = safeText(item, "name");
@@ -107,7 +116,6 @@ public class ComicVineClient implements ComicApiClient {
             publishedDate = safeText(item, "start_year");
         }
 
-        // authors (person_credits[].name)
         List<String> authors = new ArrayList<>();
         if (item.has("person_credits") && item.get("person_credits").isArray()) {
             for (JsonNode person : item.get("person_credits")) {
@@ -128,7 +136,6 @@ public class ComicVineClient implements ComicApiClient {
         );
     }
 
-    /** Safe text extraction utility. */
     private static String safeText(JsonNode node, String field) {
         return node.has(field) && !node.get(field).isNull()
                 ? node.get(field).asText(null)
