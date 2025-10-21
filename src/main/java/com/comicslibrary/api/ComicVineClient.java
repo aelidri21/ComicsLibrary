@@ -13,6 +13,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.net.http.HttpResponse;
+
 
 /**
  * ComicVine API Client (https://comicvine.gamespot.com/api/)
@@ -21,11 +23,11 @@ public class ComicVineClient implements ComicApiClient {
 
     private static final String BASE_URL = "https://comicvine.gamespot.com/api/search/";
     private static final String USER_AGENT = "ComicsLibrary/1.0 (+https://github.com/anas)";
-    private static final int MAX_RESULTS = 10;
+    private static final int MAX_RESULTS = 50;
 
     private static final String RESOURCES = "volume,issue";
     private static final String FIELD_LIST =
-            "id,name,deck,start_year,cover_date,publisher,person_credits,description,site_detail_url";
+            "id,name,deck,start_year,cover_date,publisher,person_credits,description,site_detail_url,image";
 
     private final HttpClient http = HttpClient.newHttpClient();
     private final ObjectMapper mapper = new ObjectMapper();
@@ -116,6 +118,14 @@ public class ComicVineClient implements ComicApiClient {
             publishedDate = safeText(item, "start_year");
         }
 
+        String coverUrl = null;
+        var img = item.path("image");
+        if (img.isObject()) {
+            if (img.hasNonNull("super_url"))      coverUrl = img.get("super_url").asText();
+            else if (img.hasNonNull("thumb_url")) coverUrl = img.get("thumb_url").asText();
+            else if (img.hasNonNull("small_url")) coverUrl = img.get("small_url").asText();
+        }
+
         List<String> authors = new ArrayList<>();
         if (item.has("person_credits") && item.get("person_credits").isArray()) {
             for (JsonNode person : item.get("person_credits")) {
@@ -132,7 +142,8 @@ public class ComicVineClient implements ComicApiClient {
                 authors.isEmpty() ? null : authors,
                 publisher,
                 publishedDate,
-                desc
+                desc,
+                coverUrl
         );
     }
 

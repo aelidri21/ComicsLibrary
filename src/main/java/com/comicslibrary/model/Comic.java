@@ -7,7 +7,8 @@ public record Comic(
         List<String> authors,
         String publisher,
         String publishedDate,
-        String description
+        String description,
+        String coverUrl
 ) {
 
     public Comic {
@@ -16,6 +17,7 @@ public record Comic(
         publisher = normalize(publisher);
         publishedDate = normalize(publishedDate);
         description = normalize(description);
+        coverUrl = normalize(coverUrl); 
         authors = (authors == null) ? List.of() : List.copyOf(authors);
     }
 
